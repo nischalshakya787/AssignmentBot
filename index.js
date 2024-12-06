@@ -2,6 +2,7 @@ import { Client, GatewayIntentBits, REST, Routes } from "discord.js";
 import { SlashCommandBuilder } from "discord.js";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
+import Assignment from "./model/Assignment.js";
 
 dotenv.config();
 
@@ -41,7 +42,7 @@ client.once("ready", async () => {
           option
             .setName("details") // Option name
             .setDescription("Additional details about the assignment") // Option description
-            .setRequired(false) // Optional field
+            .setRequired(true) // Optional field
       )
       .toJSON(),
   ];
@@ -54,6 +55,8 @@ client.once("ready", async () => {
       ),
       { body: commands }
     );
+
+    //Connection to MongoDB
     await mongoose.connect(process.env.MONGO_URL);
     console.log("Connected to DB");
 
@@ -73,6 +76,7 @@ client.on("messageCreate", (message) => {
   }
 });
 
+//Interaction for Commands
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isCommand()) return;
   if (interaction.commandName === "setassignment") {
@@ -80,12 +84,33 @@ client.on("interactionCreate", async (interaction) => {
     const deadline = interaction.options.getString("deadline");
     const details = interaction.options.getString("details");
 
-    const work = { subject, deadline, details };
+    // Calculate Time Remaining
+    const currentTime = new Date();
+    const deadlineTime = new Date(deadline);
+    const timeRemaining = deadlineTime - currentTime;
 
-    await interaction.reply(
-      `**Testing Work Object**\n` +
-        `\`\`\`json\n${JSON.stringify(work, null, 2)}\n\`\`\``
+    // Convert time remaining to days, hours, and minutes
+    const daysRemaining = Math.floor(timeRemaining / (1000 * 60 * 60 * 24));
+    const hoursRemaining = Math.floor(
+      (timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
     );
+    const minutesRemaining = Math.floor(
+      (timeRemaining % (1000 * 60 * 60)) / (1000 * 60)
+    );
+    // Format the time remaining
+    const timeRemainingString = `${daysRemaining} day(s), ${hoursRemaining} hour(s), ${minutesRemaining} minute(s)`;
+    try {
+      await Assignment.create({ subject, deadline, details });
+      await interaction.reply(
+        `**Assignment Details**\n` +
+          `**Subject**: ${work.assignmentName}\n` +
+          `**Deadline**: ${work.deadline}\n` +
+          `**Time Remaining**: ${timeRemainingString}\n` +
+          `**Details**: ${work.details || "No additional details provided."}`
+      );
+    } catch (error) {
+      console.log(error);
+    }
   }
 });
 
