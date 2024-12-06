@@ -79,6 +79,7 @@ client.on("messageCreate", (message) => {
 //Interaction for Commands
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isCommand()) return;
+
   if (interaction.commandName === "setassignment") {
     const subject = interaction.options.getString("subject");
     const deadline = interaction.options.getString("deadline");
@@ -99,15 +100,27 @@ client.on("interactionCreate", async (interaction) => {
     );
     // Format the time remaining
     const timeRemainingString = `${daysRemaining} day(s), ${hoursRemaining} hour(s), ${minutesRemaining} minute(s)`;
+
+    //Channel to send the notify other(like assignment channel);
+    const channel = client.channels.cache.get(process.env.CHANNEL_ID);
+
     try {
-      await Assignment.create({ subject, deadline, details });
-      await interaction.reply(
-        `**Assignment Details**\n` +
-          `**Subject**: ${work.assignmentName}\n` +
-          `**Deadline**: ${work.deadline}\n` +
+      //Stores the message in mongoDB
+      //Response to send all
+      channel.send({
+        content:
+          ` @everyone\n **Assignment Details**\n` +
+          `**Subject**: ${subject}\n` +
+          `**Deadline**: ${deadline}\n` +
           `**Time Remaining**: ${timeRemainingString}\n` +
-          `**Details**: ${work.details || "No additional details provided."}`
-      );
+          `**Details**: ${details || "No additional details provided."}`,
+      });
+      await Assignment.create({ subject, deadline, details });
+
+      await interaction.reply({
+        content: "Assignment Sent and Saved to Database!!",
+        ephemeral: true,
+      });
     } catch (error) {
       console.log(error);
     }
