@@ -21,9 +21,29 @@ const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
 client.once("ready", async () => {
   const commands = [
     new SlashCommandBuilder()
-      .setName("setAssignment")
-      .setDescription("Write in this format: ")
-      .addStringOption((option) => option.setName("message").setRequired(true))
+      .setName("setassignment") // Command name
+      .setDescription("Set an assignment with a name, deadline, and details.") // Command description
+      .addStringOption(
+        (option) =>
+          option
+            .setName("subject") // Option name
+            .setDescription("The name of the assignment") // Option description
+            .setRequired(true) // Makes it mandatory
+      )
+      .addStringOption(
+        (option) =>
+          option
+            .setName("deadline") // Option name
+            .setDescription("Deadline for the assignment (e.g., YYYY-MM-DD)") // Option description
+            .setRequired(true) // Makes it mandatory
+      )
+      .addStringOption(
+        (option) =>
+          option
+            .setName("details") // Option name
+            .setDescription("Additional details about the assignment") // Option description
+            .setRequired(false) // Optional field
+      )
       .toJSON(),
   ];
   try {
@@ -47,6 +67,22 @@ client.on("messageCreate", (message) => {
   // Basic command
   if (message.content === "!ping") {
     message.channel.send("");
+  }
+});
+
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isCommand()) return;
+  if (interaction.commandName === "setassignment") {
+    const subject = interaction.options.getString("subject");
+    const deadline = interaction.options.getString("deadline");
+    const details = interaction.options.getString("details");
+
+    const work = { subject, deadline, details };
+
+    await interaction.reply(
+      `**Testing Work Object**\n` +
+        `\`\`\`json\n${JSON.stringify(work, null, 2)}\n\`\`\``
+    );
   }
 });
 
