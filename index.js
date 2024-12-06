@@ -1,12 +1,7 @@
-import {
-  Client,
-  ClientPresence,
-  GatewayIntentBits,
-  REST,
-  Routes,
-} from "discord.js";
+import { Client, GatewayIntentBits, REST, Routes } from "discord.js";
 import { SlashCommandBuilder } from "discord.js";
 import dotenv from "dotenv";
+import mongoose from "mongoose";
 
 dotenv.config();
 
@@ -17,9 +12,13 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
   ],
 });
+
 const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
+
 client.once("ready", async () => {
+  //Creating Commands
   const commands = [
+    //Command for setting assignment
     new SlashCommandBuilder()
       .setName("setassignment") // Command name
       .setDescription("Set an assignment with a name, deadline, and details.") // Command description
@@ -47,6 +46,7 @@ client.once("ready", async () => {
       .toJSON(),
   ];
   try {
+    //Registering commands in the GUILD
     await rest.put(
       Routes.applicationGuildCommands(
         process.env.CLIENT_ID,
@@ -86,4 +86,5 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
+//Login for Bot
 client.login(process.env.TOKEN);
