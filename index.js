@@ -17,9 +17,27 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
   ],
 });
-
-client.on("ready", () => {
-  console.log(`Bot is online as ${client.user.tag}`);
+const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
+client.once("ready", async () => {
+  const commands = [
+    new SlashCommandBuilder()
+      .setName("setAssignment")
+      .setDescription("Write in this format: ")
+      .addStringOption((option) => option.setName("message").setRequired(true))
+      .toJSON(),
+  ];
+  try {
+    await rest.put(
+      Routes.applicationGuildCommands(
+        process.env.CLIENT_ID,
+        process.env.GUILD_ID
+      ),
+      { body: commands }
+    );
+    console.log("Successfully registered commands.");
+  } catch (error) {
+    console.error(error);
+  }
 });
 
 client.on("messageCreate", (message) => {
@@ -28,7 +46,7 @@ client.on("messageCreate", (message) => {
 
   // Basic command
   if (message.content === "!ping") {
-    message.channel.send("Nakara Muji");
+    message.channel.send("");
   }
 });
 
