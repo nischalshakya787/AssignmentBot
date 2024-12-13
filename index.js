@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import Assignment from "./model/Assignment.js";
 import moment from "moment";
+import cron from "node-cron";
 
 dotenv.config();
 
@@ -17,8 +18,8 @@ const client = new Client({
 
 const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
 
+// Calculate Time Remaining
 const timeRemaining = (deadline) => {
-  // Calculate Time Remaining
   const currentTime = new Date();
   const deadlineTime = new Date(deadline);
   const timeRemaining = deadlineTime - currentTime;
@@ -114,12 +115,12 @@ client.on("interactionCreate", async (interaction) => {
       return interaction.reply("Invalid deadline format. Use YYYY-MM-DD.");
     }
 
-    const deadlineDate = moment(deadline + " 16:00", "YYYY-MM-DD HH:mm"); // Set time to 4 PM
+    const deadlineDate = moment(deadline + " 20:10", "YYYY-MM-DD HH:mm"); // Set time to 4 PM
 
     //Validation if user sets time at past
-    if (deadlineDate.isBefore(moment())) {
-      return interaction.reply("The deadline cannot be in the past.");
-    }
+    // if (deadlineDate.isBefore(moment())) {
+    //   return interaction.reply("The deadline cannot be in the past.");
+    // }
 
     const timeRemainingString = timeRemaining(deadline);
 
