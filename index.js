@@ -3,6 +3,7 @@ import { SlashCommandBuilder } from "discord.js";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import Assignment from "./model/Assignment.js";
+import moment from "moment";
 
 dotenv.config();
 
@@ -15,6 +16,24 @@ const client = new Client({
 });
 
 const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
+
+const timeRemaining = (deadline) => {
+  // Calculate Time Remaining
+  const currentTime = new Date();
+  const deadlineTime = new Date(deadline);
+  const timeRemaining = deadlineTime - currentTime;
+
+  // Convert time remaining to days, hours, and minutes
+  const daysRemaining = Math.floor(timeRemaining / (1000 * 60 * 60 * 24));
+  const hoursRemaining = Math.floor(
+    (timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+  );
+  const minutesRemaining = Math.floor(
+    (timeRemaining % (1000 * 60 * 60)) / (1000 * 60)
+  );
+  // Format the time remaining
+  return `${daysRemaining} day(s), ${hoursRemaining} hour(s), ${minutesRemaining} minute(s)`;
+};
 
 client.once("ready", async () => {
   //Creating Commands
@@ -85,25 +104,24 @@ client.on("interactionCreate", async (interaction) => {
   if (!interaction.isCommand()) return;
 
   if (interaction.commandName === "setassignment") {
+    //Getting the input data
     const subject = interaction.options.getString("subject");
     const deadline = interaction.options.getString("deadline");
     const details = interaction.options.getString("details");
 
-    // Calculate Time Remaining
-    const currentTime = new Date();
-    const deadlineTime = new Date(deadline);
-    const timeRemaining = deadlineTime - currentTime;
+    // Validate deadline
+    if (!moment(deadline, "YYYY-MM-DD", true).isValid()) {
+      return interaction.reply("Invalid deadline format. Use YYYY-MM-DD.");
+    }
 
-    // Convert time remaining to days, hours, and minutes
-    const daysRemaining = Math.floor(timeRemaining / (1000 * 60 * 60 * 24));
-    const hoursRemaining = Math.floor(
-      (timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
-    );
-    const minutesRemaining = Math.floor(
-      (timeRemaining % (1000 * 60 * 60)) / (1000 * 60)
-    );
-    // Format the time remaining
-    const timeRemainingString = `${daysRemaining} day(s), ${hoursRemaining} hour(s), ${minutesRemaining} minute(s)`;
+    const deadlineDate = moment(deadline + " 16:00", "YYYY-MM-DD HH:mm"); // Set time to 4 PM
+
+    //Validation if user sets time at past
+    if (deadlineDate.isBefore(moment())) {
+      return interaction.reply("The deadline cannot be in the past.");
+    }
+
+    const timeRemainingString = timeRemaining(deadline);
 
     //Channel to send the notify other(like assignment channel);
     const channel = client.channels.cache.get(process.env.CHANNEL_ID);
@@ -124,6 +142,19 @@ client.on("interactionCreate", async (interaction) => {
       await interaction.reply({
         content: "Assignment sent and saved to Database.",
         ephemeral: true,
+      });
+
+      //Convering into cron format for cronjob
+      const cronTime = `${deadlineDate.minutes()} ${deadlineDate.hours()} ${deadlineDate.date()} ${
+        deadlineDate.month() + 1
+      } *`;
+
+      //Scheduling the task
+      cron.schedule(cronTime, () => {
+        // Send message to the assignment channel
+        channel.send(
+          `Reminder: The assignment "${subject}" is due now! Details: ${details}`
+        );
       });
     } catch (error) {
       console.log(error);
