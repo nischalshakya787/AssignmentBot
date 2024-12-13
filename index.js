@@ -45,6 +45,10 @@ client.once("ready", async () => {
             .setRequired(true) // Optional field
       )
       .toJSON(),
+    new SlashCommandBuilder()
+      .setName("assignment")
+      .setDescription("Get details of an assignment.")
+      .toJSON(),
   ];
   try {
     //Registering commands in the GUILD
@@ -118,7 +122,24 @@ client.on("interactionCreate", async (interaction) => {
       await Assignment.create({ subject, deadline, details });
 
       await interaction.reply({
-        content: "Assignment Sent and Saved to Database!!",
+        content: "Assignment sent and saved to Database.",
+        ephemeral: true,
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  }
+  if (interaction.commandName === "assignment") {
+    try {
+      const assignment = await Assignment.find({});
+      let assignmentString = "Pending Assignments:";
+      assignment.map((content, index) => {
+        assignmentString += `\n\n**${index + 1}. ${
+          content.subject
+        }** **Deadline:** ${content.deadline}\n**Details:** ${content.details}`;
+      });
+      await interaction.reply({
+        content: assignmentString,
         ephemeral: true,
       });
     } catch (error) {
