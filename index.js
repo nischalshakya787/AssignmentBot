@@ -119,7 +119,7 @@ client.on("interactionCreate", async (interaction) => {
       return interaction.reply("Invalid deadline format. Use YYYY-MM-DD.");
     }
 
-    const deadlineDate = moment(deadline + " 20:10", "YYYY-MM-DD HH:mm"); // Set time to 4 PM
+    const deadlineDate = moment(deadline + "16:00", "YYYY-MM-DD HH:mm"); // Set time to 4 PM
 
     //Validation if user sets time at past
     // if (deadlineDate.isBefore(moment())) {
@@ -146,16 +146,16 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      //Convering into cron format for cronjob
-      const cronTime = `${deadlineDate.minutes()} ${deadlineDate.hours()} ${deadlineDate.date()} ${
-        deadlineDate.month() + 1
-      } *`;
+      //Convering into cron format for 1 day before the deadline for cronjob
+      const cronTime = `${deadlineDate.minutes()} ${deadlineDate.hours()} ${
+        deadlineDate.date() - 1
+      } ${deadlineDate.month() + 1} *`;
 
       //Scheduling the task
       cron.schedule(cronTime, () => {
         // Send message to the assignment channel
         channel.send(
-          `Reminder: The assignment "${subject}" is due now! Details: ${details}`
+          `**Reminder🔔🔔:**\n The assignment of **Subject:**"${subject} is due **1 day**"\n**Details:** ${details}`
         );
       });
     } catch (error) {
@@ -163,16 +163,26 @@ client.on("interactionCreate", async (interaction) => {
     }
   }
   if (interaction.commandName === "assignment") {
+    const todaysDate = new Date().toISOString().slice(0, 10);
     try {
-      const assignment = await Assignment.find({}); //Returns all the assignment stored
+      const assignment = await Assignment.find({
+        deadline: { $lte: todaysDate },
+      }); //Returns all the assignment stored
       let assignmentString = "Pending Assignments:";
 
       //Converting into readable format
-      assignment.map((content, index) => {
-        assignmentString += `\n\n**${index + 1}. ${
-          content.subject
-        }** **Deadline:** ${content.deadline}\n**Details:** ${content.details}`;
-      });
+      if (assignment.length != 0) {
+        assignment.map((content, index) => {
+          assignmentString += `\n\n**${index + 1}. ${
+            content.subject
+          }** **Deadline:** ${content.deadline}\n**Details:** ${
+            content.details
+          }`;
+        });
+      } else {
+        assignmentString +=
+          "\n Currently no Assignments has been Assigned. Be Chill Guy!!";
+      }
       //Sends an ephemeral message
       await interaction.reply({
         content: assignmentString,
