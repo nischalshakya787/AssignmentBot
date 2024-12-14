@@ -139,10 +139,11 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
+      const reminderDate = deadlineDate.clone().subtract(1, "days");
       //Convering into cron format for 1 day before the deadline for cronjob
-      const cronTime = `${deadlineDate.minutes()} ${deadlineDate.hours()} ${
-        deadlineDate.date() - 1
-      } ${deadlineDate.month() + 1} *`;
+      const cronTime = `${reminderDate.minutes()} ${reminderDate.hours()} ${reminderDate.date()} ${
+        reminderDate.month() + 1
+      } *`;
 
       //Scheduling the task
       cron.schedule(cronTime, () => {
@@ -153,6 +154,10 @@ client.on("interactionCreate", async (interaction) => {
       });
     } catch (error) {
       console.log(error);
+      interaction.reply({
+        content: "An error occurred. Please try again later.",
+        ephemeral: true,
+      });
     }
   }
   if (interaction.commandName === "assignment") {
@@ -160,7 +165,7 @@ client.on("interactionCreate", async (interaction) => {
     const todaysDate = new Date().toISOString().slice(0, 10);
     try {
       const assignment = await Assignment.find({
-        deadline: { $lte: todaysDate },
+        deadline: { $gte: todaysDate },
       }); //Returns the assignment which has not extended todaysDate
 
       let assignmentString = "Pending Assignments:";
