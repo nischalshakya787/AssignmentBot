@@ -18,10 +18,14 @@ const client = new Client({
 
 const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
 
+//Channel to send the notify other(like assignment channel);
+const channel = client.channels.cache.get(process.env.CHANNEL_ID);
+
 // Calculate Time Remaining
 const timeRemaining = (deadline) => {
   const currentTime = new Date();
   const deadlineTime = new Date(deadline);
+  deadlineTime.setUTCHours(16, 0, 0, 0);
   const timeRemaining = deadlineTime - currentTime;
 
   // Convert time remaining to days, hours, and minutes
@@ -115,7 +119,7 @@ client.on("interactionCreate", async (interaction) => {
       return interaction.reply("Invalid deadline format. Use YYYY-MM-DD.");
     }
 
-    const deadlineDate = moment(deadline + " 20:10", "YYYY-MM-DD HH:mm"); // Set time to 4 PM
+    const deadlineDate = moment(deadline + "16:00", "YYYY-MM-DD HH:mm"); // Set time to 4 PM
 
     //Validation if user sets time at past
     // if (deadlineDate.isBefore(moment())) {
@@ -123,9 +127,6 @@ client.on("interactionCreate", async (interaction) => {
     // }
 
     const timeRemainingString = timeRemaining(deadline);
-
-    //Channel to send the notify other(like assignment channel);
-    const channel = client.channels.cache.get(process.env.CHANNEL_ID);
 
     try {
       //Stores the message in mongoDB
@@ -145,16 +146,16 @@ client.on("interactionCreate", async (interaction) => {
         ephemeral: true,
       });
 
-      //Convering into cron format for cronjob
-      const cronTime = `${deadlineDate.minutes()} ${deadlineDate.hours()} ${deadlineDate.date()} ${
-        deadlineDate.month() + 1
-      } *`;
+      //Convering into cron format for 1 day before the deadline for cronjob
+      const cronTime = `${deadlineDate.minutes()} ${deadlineDate.hours()} ${
+        deadlineDate.date() - 1
+      } ${deadlineDate.month() + 1} *`;
 
       //Scheduling the task
       cron.schedule(cronTime, () => {
         // Send message to the assignment channel
         channel.send(
-          `Reminder: The assignment "${subject}" is due now! Details: ${details}`
+          `**Reminder🔔🔔:**\n The assignment of **Subject:**"${subject} is due **1 day**"\n**Details:** ${details}`
         );
       });
     } catch (error) {
@@ -162,14 +163,27 @@ client.on("interactionCreate", async (interaction) => {
     }
   }
   if (interaction.commandName === "assignment") {
+    const todaysDate = new Date().toISOString().slice(0, 10);
     try {
-      const assignment = await Assignment.find({});
+      const assignment = await Assignment.find({
+        deadline: { $lte: todaysDate },
+      }); //Returns all the assignment stored
       let assignmentString = "Pending Assignments:";
-      assignment.map((content, index) => {
-        assignmentString += `\n\n**${index + 1}. ${
-          content.subject
-        }** **Deadline:** ${content.deadline}\n**Details:** ${content.details}`;
-      });
+
+      //Converting into readable format
+      if (assignment.length != 0) {
+        assignment.map((content, index) => {
+          assignmentString += `\n\n**${index + 1}. ${
+            content.subject
+          }** **Deadline:** ${content.deadline}\n**Details:** ${
+            content.details
+          }`;
+        });
+      } else {
+        assignmentString +=
+          "\n Currently no Assignments has been Assigned. Be Chill Guy!!";
+      }
+      //Sends an ephemeral message
       await interaction.reply({
         content: assignmentString,
         ephemeral: true,
