@@ -18,6 +18,9 @@ const client = new Client({
 
 const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
 
+//Channel to send the notify other(like assignment channel);
+const channel = client.channels.cache.get(process.env.CHANNEL_ID);
+
 // Calculate Time Remaining
 const timeRemaining = (deadline) => {
   const currentTime = new Date();
@@ -125,9 +128,6 @@ client.on("interactionCreate", async (interaction) => {
 
     const timeRemainingString = timeRemaining(deadline);
 
-    //Channel to send the notify other(like assignment channel);
-    const channel = client.channels.cache.get(process.env.CHANNEL_ID);
-
     try {
       //Stores the message in mongoDB
       //Response to send all
@@ -164,13 +164,16 @@ client.on("interactionCreate", async (interaction) => {
   }
   if (interaction.commandName === "assignment") {
     try {
-      const assignment = await Assignment.find({});
+      const assignment = await Assignment.find({}); //Returns all the assignment stored
       let assignmentString = "Pending Assignments:";
+
+      //Converting into readable format
       assignment.map((content, index) => {
         assignmentString += `\n\n**${index + 1}. ${
           content.subject
         }** **Deadline:** ${content.deadline}\n**Details:** ${content.details}`;
       });
+      //Sends an ephemeral message
       await interaction.reply({
         content: assignmentString,
         ephemeral: true,
