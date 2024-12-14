@@ -41,7 +41,7 @@ const timeRemaining = (deadline) => {
 };
 
 client.once("ready", async () => {
-  //Creating Commands
+  //Creating Commands: [/setAssignment,/assignment: to view Pending Assignments]
   const commands = [
     //Command for setting assignment
     new SlashCommandBuilder()
@@ -94,16 +94,6 @@ client.once("ready", async () => {
   }
 });
 
-client.on("messageCreate", (message) => {
-  // Ignore messages from bots
-  if (message.author.bot) return;
-
-  // Basic command
-  if (message.content === "!ping") {
-    message.channel.send("");
-  }
-});
-
 //Interaction for Commands
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isCommand()) return;
@@ -121,15 +111,18 @@ client.on("interactionCreate", async (interaction) => {
 
     const deadlineDate = moment(deadline + "16:00", "YYYY-MM-DD HH:mm"); // Set time to 4 PM
 
-    //Validation if user sets time at past
-    // if (deadlineDate.isBefore(moment())) {
-    //   return interaction.reply("The deadline cannot be in the past.");
-    // }
+    // Validation if user sets time at past
+    if (deadlineDate.isBefore(moment())) {
+      return interaction.reply("The deadline cannot be in the past.");
+    }
 
+    //Returns TimeRemaining from today date to deadline
     const timeRemainingString = timeRemaining(deadline);
 
     try {
       //Stores the message in mongoDB
+      await Assignment.create({ subject, deadline, details });
+
       //Response to send all
       channel.send({
         content:
@@ -139,8 +132,8 @@ client.on("interactionCreate", async (interaction) => {
           `**Time Remaining**: ${timeRemainingString}\n` +
           `**Details**: ${details || "No additional details provided."}`,
       });
-      await Assignment.create({ subject, deadline, details });
 
+      //Responses if no error occurs
       await interaction.reply({
         content: "Assignment sent and saved to Database.",
         ephemeral: true,
@@ -155,7 +148,7 @@ client.on("interactionCreate", async (interaction) => {
       cron.schedule(cronTime, () => {
         // Send message to the assignment channel
         channel.send(
-          `**Reminder🔔🔔:**\n The assignment of **Subject:**"${subject} is due **1 day**"\n**Details:** ${details}`
+          `@everyone\n **Reminder🔔🔔:**\n The assignment of **Subject:**"${subject} is due: **1 day**"\n**Details:** ${details}`
         );
       });
     } catch (error) {
@@ -163,15 +156,18 @@ client.on("interactionCreate", async (interaction) => {
     }
   }
   if (interaction.commandName === "assignment") {
+    //Slicing Date to YYYY-MM-DD format
     const todaysDate = new Date().toISOString().slice(0, 10);
     try {
       const assignment = await Assignment.find({
         deadline: { $lte: todaysDate },
-      }); //Returns all the assignment stored
+      }); //Returns the assignment which has not extended todaysDate
+
       let assignmentString = "Pending Assignments:";
 
       //Converting into readable format
       if (assignment.length != 0) {
+        //If there is Assignments Assigned
         assignment.map((content, index) => {
           assignmentString += `\n\n**${index + 1}. ${
             content.subject
@@ -180,8 +176,9 @@ client.on("interactionCreate", async (interaction) => {
           }`;
         });
       } else {
+        //If there is no Assignments Assigned
         assignmentString +=
-          "\n Currently no Assignments has been Assigned. Be Chill Guy!!";
+          "\n Currently no Assignments has been Assigned. Be A Chill Guy!!";
       }
       //Sends an ephemeral message
       await interaction.reply({
