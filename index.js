@@ -18,6 +18,55 @@ const client = new Client({
 
 const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
 
+//Function to do cron job if the application restarts
+const scheduleReminder = async () => {
+  try {
+    const channel = client.channels.cache.get(process.env.CHANNEL_ID);
+    if (!channel) {
+      console.error(
+        "Channel not found. Check CHANNEL_ID in the environment variables."
+      );
+      return;
+    }
+    // Fetch assignments with deadlines in the future
+    const jobs = await Assignment.find({ deadline: { $gte: new Date() } });
+    if (!jobs.length) {
+      console.log("No assignments with future deadlines found.");
+      return;
+    }
+    jobs.forEach((job) => {
+      const deadlineDate = moment(job.deadline + "16:00", "YYYY-MM-DD HH:mm"); // Set time to 4 PM
+      //Convering into cron format for 1 day before the deadline for cronjob
+      const reminderDate = deadlineDate.clone().subtract(1, "days");
+
+      // Skip if the reminder date is already in the past
+      if (reminderDate.isBefore(moment())) {
+        console.log(
+          `Skipping reminder for "${subject}" as the reminder time is in the past.`
+        );
+        return;
+      }
+      // Convert to cron format
+      const cronTime = `${reminderDate.minutes()} ${reminderDate.hours()} ${reminderDate.date()} ${
+        reminderDate.month() + 1
+      } *`;
+
+      //Scheduling the task
+      cron.schedule(cronTime, () => {
+        // Send message to the assignment channel
+        channel.send(
+          `@everyone\n **Reminder🔔🔔:**\nThe assignment of **Subject:**"${job.subject} is due: **1 day**"\n**Details:** ${job.details}`
+        );
+      });
+    });
+  } catch (error) {
+    console.error("Error scheduling reminders:", error);
+  }
+};
+
+//Call the function once
+scheduleReminder();
+
 // Calculate Time Remaining
 const timeRemaining = (deadline) => {
   const currentTime = new Date();
