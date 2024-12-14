@@ -22,6 +22,7 @@ const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
 const timeRemaining = (deadline) => {
   const currentTime = new Date();
   const deadlineTime = new Date(deadline);
+  deadlineTime.setUTCHours(16, 0, 0, 0);
   const timeRemaining = deadlineTime - currentTime;
 
   // Convert time remaining to days, hours, and minutes
