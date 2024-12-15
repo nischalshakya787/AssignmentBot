@@ -64,9 +64,6 @@ const scheduleReminder = async () => {
   }
 };
 
-//Call the function once
-scheduleReminder();
-
 // Calculate Time Remaining
 const timeRemaining = (deadline) => {
   const currentTime = new Date();
@@ -222,11 +219,17 @@ client.on("interactionCreate", async (interaction) => {
       if (assignment.length != 0) {
         //If there is Assignments Assigned
         assignment.map((content, index) => {
+          const timeRemainingString = timeRemaining(content.deadline);
           assignmentString += `\n\n**${index + 1}. ${
             content.subject
           }** **Deadline:** ${content.deadline
             .toISOString()
-            .slice(0, 10)}\n **Details:** ${content.details}`;
+            .slice(
+              0,
+              10
+            )}\n **Time Remaining:** :${timeRemainingString}\n**Details:** ${
+            content.details
+          }`;
         });
       } else {
         //If there is no Assignments Assigned
@@ -246,3 +249,5 @@ client.on("interactionCreate", async (interaction) => {
 
 //Login for Bot
 client.login(process.env.TOKEN);
+//Call the function once
+scheduleReminder();
