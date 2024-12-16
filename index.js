@@ -35,14 +35,17 @@ const scheduleReminder = async () => {
       return;
     }
     jobs.forEach((job) => {
-      const deadlineDate = moment(job.deadline + "16:00", "YYYY-MM-DD HH:mm"); // Set time to 4 PM
+      const deadlineDate = moment(
+        job.deadline.toISOString().slice(0, 10) + "10:15",
+        "YYYY-MM-DD HH:mm"
+      ); // Set time to 4 PM
       //Convering into cron format for 1 day before the deadline for cronjob
       const reminderDate = deadlineDate.clone().subtract(1, "days");
 
       // Skip if the reminder date is already in the past
       if (reminderDate.isBefore(moment())) {
         console.log(
-          `Skipping reminder for "${subject}" as the reminder time is in the past.`
+          `Skipping reminder for "${job.subject}" as the reminder time is in the past.`
         );
         return;
       }
@@ -55,9 +58,10 @@ const scheduleReminder = async () => {
       cron.schedule(cronTime, () => {
         // Send message to the assignment channel
         channel.send(
-          `@everyone\n **Reminder🔔🔔:**\nThe assignment of **Subject:**"${job.subject} is due: **1 day**"\n**Details:** ${job.details}`
+          `@everyone\n **Reminder🔔🔔:**\nThe assignment of **Subject:**"${job.subject} is due: **Tomorrow**"\n**Details:** ${job.details}`
         );
       });
+      console.log(`Reminder of ${job.subject} is set`);
     });
   } catch (error) {
     console.error("Error scheduling reminders:", error);
@@ -132,6 +136,8 @@ client.once("ready", async () => {
     console.log("Connected to DB");
 
     console.log("Successfully registered commands.");
+    console.log("Deployed Change");
+    scheduleReminder();
   } catch (error) {
     console.error(error);
   }
@@ -152,7 +158,7 @@ client.on("interactionCreate", async (interaction) => {
       return interaction.reply("Invalid deadline format. Use YYYY-MM-DD.");
     }
 
-    const deadlineDate = moment(deadline + "16:00", "YYYY-MM-DD HH:mm"); // Set time to 4 PM
+    const deadlineDate = moment(deadline + "10:15", "YYYY-MM-DD HH:mm"); // Set time to 4 PM
 
     // Validation if user sets time at past
     if (deadlineDate.isBefore(moment())) {
@@ -194,7 +200,7 @@ client.on("interactionCreate", async (interaction) => {
       cron.schedule(cronTime, () => {
         // Send message to the assignment channel
         channel.send(
-          `@everyone\n **Reminder🔔🔔:**\nThe assignment of **Subject:**"${subject} is due: **1 day**"\n**Details:** ${details}`
+          `@everyone\n **Reminder🔔🔔:**\nThe assignment of **Subject:**"${subject} is due: **Tomorrow**"\n**Details:** ${details}`
         );
       });
     } catch (error) {
@@ -219,6 +225,7 @@ client.on("interactionCreate", async (interaction) => {
       if (assignment.length != 0) {
         //If there is Assignments Assigned
         assignment.map((content, index) => {
+          //Returns TimeRemaining from today date to deadline
           const timeRemainingString = timeRemaining(content.deadline);
           assignmentString += `\n\n**${index + 1}. ${
             content.subject
@@ -227,7 +234,7 @@ client.on("interactionCreate", async (interaction) => {
             .slice(
               0,
               10
-            )}\n **Time Remaining:** :${timeRemainingString}\n**Details:** ${
+            )}\n**Time Remaining:** ${timeRemainingString} \n**Details:** ${
             content.details
           }`;
         });
@@ -250,4 +257,3 @@ client.on("interactionCreate", async (interaction) => {
 //Login for Bot
 client.login(process.env.TOKEN);
 //Call the function once
-scheduleReminder();
