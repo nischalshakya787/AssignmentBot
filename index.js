@@ -36,7 +36,7 @@ const scheduleReminder = async () => {
     }
     jobs.forEach((job) => {
       const deadlineDate = moment(
-        job.deadline.toISOString().slice(0, 10) + "10:15",
+        job.deadline.toISOString().slice(0, 10) + "7:15",
         "YYYY-MM-DD HH:mm"
       ); // Set time to 4 PM
       //Convering into cron format for 1 day before the deadline for cronjob
@@ -158,7 +158,7 @@ client.on("interactionCreate", async (interaction) => {
       return interaction.reply("Invalid deadline format. Use YYYY-MM-DD.");
     }
 
-    const deadlineDate = moment(deadline + "10:15", "YYYY-MM-DD HH:mm"); // Set time to 4 PM
+    const deadlineDate = moment(deadline + "7:15", "YYYY-MM-DD HH:mm"); // Set time to 4 PM
 
     // Validation if user sets time at past
     if (deadlineDate.isBefore(moment())) {
